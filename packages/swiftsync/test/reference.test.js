@@ -2,8 +2,10 @@
 // (github.com/2140-dev/swiftsync, aggregate crate). Golden vector produced by
 // running the reference's own hash_outpoint + Aggregate on a known outpoint:
 //   internal txid 0102…20 (display 201f…0201), vout 0x12345678.
-// If this ever fails, our digests no longer interoperate with the reference (and
-// btcd/floresta) — treat as a release blocker.
+// This is a CORRECTNESS anchor, not an interop requirement: per Somsen the hash
+// aggregate is a local computation (never shared between nodes), so cross-
+// compatibility comes from the hintsfile, not the aggregate. We still pin this so
+// our secure construction can't silently change underfoot.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

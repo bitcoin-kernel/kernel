@@ -70,8 +70,13 @@ method we use against Bitcoin Core. No external reference needed.
 1. **Construction — salted additive, two 128-bit lanes (matches SwiftSync).**
    Element = `taggedSHA256("SwiftSync", preimage [‖ salt])`; accumulator = two
    independent 128-bit lanes (high/low halves of the element, wrapping add/sub —
-   no carry), matching `2140-dev/swiftsync` byte-for-byte (interop with
-   btcd/floresta). The construction history, per Somsen directly: **XOR** was
+   no carry), matching `2140-dev/swiftsync` byte-for-byte as a **correctness
+   anchor** (not an interop requirement). Per Somsen, the aggregate is a *local*
+   computation — each node checks its own aggregate against its own commitment, the
+   digest is never shared, so implementations are cross-compatible **no matter how
+   they aggregate, as long as it's secure**. The one cross-compatibility artifact is
+   the **hintsfile** (its own BIP, Elias-Fano) — that is what we must match exactly,
+   not the aggregate. The construction history, per Somsen directly: **XOR** was
    suggested and **rejected as insecure**; the choice is a **salted additive** hash
    — "a cheap way to get a secure hash aggregate" — with **MuHash** as the saltless
    but "much more expensive" alternative (kept swappable). The salt is **per-run**
