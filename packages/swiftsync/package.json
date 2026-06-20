@@ -8,6 +8,7 @@
     ".": "./index.js",
     "./accumulator": "./accumulator.js",
     "./validate": "./validate.js",
+    "./hint": "./hint.js",
     "./hintsfile": "./hintsfile.js",
     "./undo": "./undo.js"
   }

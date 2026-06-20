@@ -3,6 +3,7 @@
 
 export { Accumulator } from './accumulator.js';
 export { applyBlocks } from './validate.js';
+export { generateHints, reconstructUtxo } from './hint.js';
 export { eliasFanoEncode, eliasFanoDecode, encodeHintsfile, decodeHintsfile } from './hintsfile.js';
 export { compressAmount, decompressAmount, compressScript, expandScript, encodeHeightCode, decodeHeightCode, encodeCoin as encodeSpentCoin, decodeCoin as decodeSpentCoin } from './undo.js';
 

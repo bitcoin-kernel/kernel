@@ -63,8 +63,8 @@ method we use against Bitcoin Core. No external reference needed.
 - `validate.js` — drive the engine over blocks → add/spend ops. **Done** (verified on 5,000 real testnet4 blocks).
 - `hintsfile.js` — Elias-Fano hintsfile encode/decode (the interop artifact). **Done** (matches the BIP `elias_fano.json` vectors byte-for-byte).
 - `undo.js` — spent-coin data for the full version: CompressAmount + reconstructable script + height code + Coin record. **Done** (amount/script match the BIP vectors byte-for-byte).
-- (todo) hint generation — produce the per-block unspent-index sets from a validated chain (needs the finished sync).
-- (todo) oracle test — run validate-sync + SwiftSync over testnet4; assert equal digests.
+- `hint.js` — `generateHints` (per-block unspent-index sets from a chain) + `reconstructUtxo` (the assumevalid verifier). **Done** (end-to-end on 5,000 real testnet4 blocks: reconstruction == real UTXO set; hintsfile 0.98 bits/output).
+- (todo) full-chain run — generate the real testnet4 hintsfile + commitment (needs the finished sync) and the accumulator oracle test over the whole chain.
 
 ## Decisions
 
