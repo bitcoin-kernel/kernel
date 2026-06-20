@@ -9,14 +9,26 @@ single **cancelling accumulator**:
 - coin **spent** → `remove(−)`
 - coins created *and* spent within the range **cancel**
 
-After the chain, the accumulator's digest is the hash of exactly the **unspent**
-set. Compare it to a **trusted UTXO-set commitment**; match = validated. Because
-add/remove are commutative, validation parallelises across cores (each worker
-keeps an `Accumulator`, all `merge()` at the end) with no sequential UTXO-set
-dependency. Every script/signature is still checked — only the bookkeeping
-changed. The **hint** (which coins are spent-within-range) is untrusted: a wrong
-hint makes the digest *not match* and validation fail; it can never make an
+After the chain, the residual digest equals the **UTXO set at the tip** (all
+outputs − all inputs = the unspent set). Compare it to a **trusted UTXO-set
+commitment**; match = validated. Because add/remove are commutative, validation
+parallelises across cores (each worker keeps an `Accumulator`, all `merge()` at
+the end) with no sequential UTXO-set dependency.
+
+**The hint is a bit vector — exactly one bit per output** ("does this output
+remain unspent at the tip"), ≈<100 MB compressed for all history. It is untrusted:
+a wrong bit makes the digest not match and validation fails; it can never make an
 invalid chain pass.
+
+**Two versions (Somsen).** *assumevalid*: the accumulator element is just the
+**outpoint**, and scripts are **not checked** (trusting the assumevalid
+checkpoint) — this is the headline 5.28× speedup. *non-assumevalid (full)*: the
+element is the **full coin** (outpoint, output script, amount, coinbase flag,
+height), **every script is checked**, and the prevout data scripts need comes
+from separate **undo data** (served P2P — most nodes already produce it). We build
+the **full** version: it re-derives everything and trusts no checkpoint, matching
+`validate-sync` and our pristine stance. Slower than 5.28×, still stateless and
+parallel.
 
 ## The oracle (why this is low-risk for us)
 
@@ -28,30 +40,45 @@ method we use against Bitcoin Core. No external reference needed.
 
 ## Components
 
-- `accumulator.js` — the commutative add/remove/merge accumulator. **Done.**
-- `index.js` `encodeCoin` — canonical coin bytes. Default format; see decisions.
-- (todo) `hint.js` — generate/parse the spent-within-range hint from a validated chain.
-- (todo) `validate.js` — drive the engine over blocks producing add/remove ops, in parallel workers, ending on a digest.
+- `accumulator.js` — commutative salted add/remove/merge accumulator. **Done.**
+- `index.js` `encodeCoin` — canonical coin bytes (the 5-tuple, below).
+- (todo) `hint.js` — generate/parse the 1-bit-per-output hint from a validated chain.
+- (todo) `undo.js` — read/serve spent-output data (≈Core `rev*.dat`) for the full version.
+- (todo) `validate.js` — drive the engine over blocks → add/remove ops, parallel workers, end on a digest.
 - (todo) oracle test — run validate-sync + SwiftSync over testnet4; assert equal digests.
 
-## Open decisions
+## Decisions
 
-1. **Accumulator construction.** Default = *additive hash* (sum of domain-separated
-   SHA256 elements mod 2²⁵⁶): fast, fine because we compute *both* sides. Stronger
-   alternative = **ECMH** (elliptic-curve multiset hash; we already have secp256k1)
-   — pick this only if we want a *published, cross-implementation* commitment.
-   Recommendation: ship additive now, keep the `Accumulator` interface swappable.
-2. **Coin encoding.** Default `txid||vout||amount||scriptPubKey`. Decision: include
-   `height`/`coinbase`? Only if the commitment must bind coinbase maturity.
-3. **Prevout data at spend time.** Scripts still need the spent output's
-   scriptPubKey+amount. Decide how the validator obtains it without the UTXO set
-   (carry it in the hint, or a bounded two-pass). This is the main remaining design
-   question and the next thing to pin down.
-4. **Commitment source for testnet4.** Use validate-sync's UTXO-set digest as the
-   trusted value (internal oracle); later, an assumeUTXO-style published hash.
+1. **Construction — additive+salt (default), MuHash swappable.** Default is the
+   salted additive hash: `Σ SHA256(tag‖coin‖salt) mod 2²⁵⁶` (remove = subtract).
+   Plain additive hashing is collision-weak (subset-sum / generalized-birthday),
+   so the **salt** is load-bearing: derive it from the validation-height blockhash
+   **plus per-node randomness**, so a forger gets only one blind try per node.
+   SwiftSync's *original* construction was **MuHash** (provably birthday-resistant);
+   keep the `Accumulator` interface swappable so MuHash is a drop-in when provable
+   security (no salt argument) is wanted, at some speed cost.
+2. **Coin encoding — the 5-tuple (full version).** `outpoint ‖ scriptPubKey ‖
+   amount ‖ coinbaseFlag ‖ height` (Somsen's "five data points"). Committing to the
+   amount is essential — gmaxwell's point: an invalid chain would *steal* coins, not
+   inflate, so the accumulator must bind amounts (and it does).
+3. **Prevouts at spend time — undo data.** From a separate stream ≈ Core's
+   `rev*.dat` (the spent outputs' script+amount), ~10% more data, P2P-served. Not
+   the hint (the hint is 1 bit/output). Needed for both script checks and to
+   recompute the spent coin's element for removal.
+4. **Commitment source.** validate-sync's UTXO-set digest as the trusted value
+   (internal oracle); later, an assumeUTXO-style published hash.
+
+## Subtleties to handle (from the bitcoin-dev review)
+
+- **BIP30** duplicate-output check without a UTXO set (Somsen's writeup addresses it).
+- **Coinbase maturity** and **outputs created+spent in the same block** — keep correct.
+- **Free checks still done:** nLocktime vs block height, etc.
+- **Signatures:** batch-verify (the big cost once bookkeeping is cheap).
+- **Negative tests:** invalid hints, tricky double-spends, accidental element collisions.
 
 ## Status
 
-Scaffold + accumulator with verified invariants (cancellation, commutativity,
-parallel merge). Not yet wired to the engine — that follows once decision (3) is
-settled.
+Accumulator (salted, additive) with verified invariants — cancellation,
+commutativity, parallel merge, salt-sensitivity. Next: `encodeCoin` → 5-tuple,
+then the engine driver + undo-data reader, then the oracle test against
+validate-sync.

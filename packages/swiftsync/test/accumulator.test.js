@@ -40,6 +40,15 @@ test('parallel partials merge to the single-thread digest', () => {
   assert.equal(hex(w1.digest()), hex(whole.digest()));
 });
 
+test('salt changes the digest (collision-resistance lever is actually mixed in)', () => {
+  const a = new Accumulator({ sha256, salt: new Uint8Array([1, 2, 3]) }).add(coin('x'));
+  const b = new Accumulator({ sha256, salt: new Uint8Array([9, 9, 9]) }).add(coin('x'));
+  assert.notEqual(hex(a.digest()), hex(b.digest()), 'same coin, different salt → different element');
+  // but the same salt is reproducible (deterministic per run)
+  const c = new Accumulator({ sha256, salt: new Uint8Array([1, 2, 3]) }).add(coin('x'));
+  assert.equal(hex(a.digest()), hex(c.digest()));
+});
+
 test('SwiftSync end state equals the real unspent set', () => {
   // create a,b,c ; spend b within range  →  digest must equal the set {a,c}
   const fast = new Accumulator({ sha256 });

@@ -7,13 +7,16 @@
 // never matters, blocks can be validated in any order and across many cores:
 // each worker keeps its own Accumulator and they merge() at the end.
 //
-// Construction (default): an additive hash. Each coin's canonical encoding is
-// domain-separated-SHA256'd to a 256-bit element; the accumulator is the sum of
-// those elements mod 2^256 (remove = subtract). This is fast — SwiftSync's whole
-// point — and secure enough *because the same construction also computes the
-// trusted commitment* (it's an internal, self-consistent choice). DESIGN.md
-// records the stronger alternative (ECMH, an elliptic-curve multiset hash) for
-// when a published, cross-implementation commitment is wanted.
+// Construction (default): a salted additive hash. Each coin's canonical encoding
+// is SHA256'd with a salt to a 256-bit element; the accumulator is the sum of
+// those elements mod 2^256 (remove = subtract). This is fast — SwiftSync's point.
+//
+// The SALT is essential, not decoration: plain additive hashing is collision-weak,
+// so per the bitcoin-dev review (gmaxwell) the salt must be a secret-ish function
+// of the blockhash at the validation height (deterministic per run, ideally plus
+// per-node randomness) — "an attacker should only get one try per node". The
+// caller derives it and passes it in. MuHash (provably birthday-resistant) is the
+// stronger, slower alternative; see DESIGN.md.
 //
 // sha256 is injected — this package couples to the kernel only through what the
 // caller passes, never an import (a WASM-backed sha256 keeps add/remove fast).
@@ -24,19 +27,23 @@ const fromBig = (n) => { const b = new Uint8Array(32); for (let i = 31; i >= 0; 
 
 export class Accumulator {
   // opts.sha256: (Uint8Array) -> Uint8Array(32)
-  constructor({ sha256 } = {}) {
+  // opts.salt:   Uint8Array — derive from the validation-height blockhash (+ per-node
+  //              randomness). Default empty ONLY for tests; production MUST pass a salt.
+  constructor({ sha256, salt = new Uint8Array(0) } = {}) {
     if (typeof sha256 !== 'function') throw new Error('Accumulator needs a sha256(bytes) function');
     this._h = sha256;
+    this._salt = salt;
     this.acc = 0n;
   }
 
-  // Map a canonical coin encoding to a 256-bit element (domain-separated so a raw
-  // coin encoding can never collide with some other hashed structure).
+  // Map a canonical coin encoding to a 256-bit element: SHA256(tag || coin || salt).
+  // The tag domain-separates; the salt is the collision-resistance lever.
   _elem(coinBytes) {
-    const tagged = new Uint8Array(coinBytes.length + 1);
-    tagged[0] = 0x53;                 // 'S' — SwiftSync coin domain tag
-    tagged.set(coinBytes, 1);
-    return toBig(this._h(tagged));
+    const t = new Uint8Array(1 + coinBytes.length + this._salt.length);
+    t[0] = 0x53;                       // 'S' — SwiftSync coin domain tag
+    t.set(coinBytes, 1);
+    t.set(this._salt, 1 + coinBytes.length);
+    return toBig(this._h(t));
   }
 
   add(coinBytes)    { this.acc = (this.acc + this._elem(coinBytes)) % MOD; return this; }
