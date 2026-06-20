@@ -1,0 +1,11 @@
+{
+  "name": "@bitcoin-kernel/swiftsync",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "description": "Stateless, parallel fast initial validation: a cancelling UTXO accumulator verified against a trusted commitment.",
+  "exports": {
+    ".": "./index.js",
+    "./accumulator": "./accumulator.js"
+  }
+}
