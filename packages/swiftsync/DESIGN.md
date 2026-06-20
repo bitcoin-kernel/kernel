@@ -40,10 +40,13 @@ parallel.
   full validation is the pristine *desktop* path. Same accumulator, different
   element (`encodeOutpoint` vs `encodeCoin`). Artifact size (hint + undo data) is
   the lever — 2140 is actively working on reducing it.
+- **SwiftSync is IBD-only and mode-agnostic** (Somsen): it "doesn't force you into
+  any specific validation mode — it just completes IBD very quickly and then you
+  can do whatever you want" (Utreexo-style or regular validation).
 - **Complementary with Utreexo, not competing:** the Utreexo team is switching to
   SwiftSync for IBD. The pairing: **SwiftSync bootstraps the chain fast → Utreexo
-  holds the resulting UTXO state compactly.** That's our two-layer plan exactly —
-  build SwiftSync first (fast sync), then Utreexo (compact state) on top.
+  (or full) holds the resulting state.** That's our two-layer plan exactly — build
+  SwiftSync first (fast sync), then Utreexo (compact state) on top.
 
 ## The oracle (why this is low-risk for us)
 
@@ -64,15 +67,18 @@ method we use against Bitcoin Core. No external reference needed.
 
 ## Decisions
 
-1. **Construction — match the reference (`2140-dev/swiftsync`).** Element =
-   `taggedSHA256("SwiftSync", preimage)`; accumulator = **two independent 128-bit
-   lanes** (high/low 16-byte halves of the element, wrapping add/sub mod 2¹²⁸ — no
-   carry between lanes). We match this byte-for-byte so our digests interoperate
-   with the reference and the btcd/floresta implementations, and so we can validate
-   against *their* hints (our de-risker). **No salt** — the reference uses none, and
-   matching it is the priority; the salt (gmaxwell's bitcoin-dev suggestion) stays
-   an opt-in escape hatch but a non-null salt breaks reference compatibility.
-   (The *gist* floated MuHash; the reference chose the simpler additive lanes.)
+1. **Construction — salted additive, two 128-bit lanes (matches SwiftSync).**
+   Element = `taggedSHA256("SwiftSync", preimage [‖ salt])`; accumulator = two
+   independent 128-bit lanes (high/low halves of the element, wrapping add/sub —
+   no carry), matching `2140-dev/swiftsync` byte-for-byte (interop with
+   btcd/floresta). The construction history, per Somsen directly: **XOR** was
+   suggested and **rejected as insecure**; the choice is a **salted additive** hash
+   — "a cheap way to get a secure hash aggregate" — with **MuHash** as the saltless
+   but "much more expensive" alternative (kept swappable). The salt is **per-run**
+   (blockhash-derived + per-node randomness), so it is *not* an interop value: the
+   shareable artifact is the salt-free **1-bit hint**, while each node recomputes
+   its salted digest locally. (`salt=null` reproduces the early prototype, which
+   currently hashes outpoints unsalted — used for vectors/tests.)
 2. **Coin encoding — the 5-tuple (full version).** `outpoint ‖ scriptPubKey ‖
    amount ‖ coinbaseFlag ‖ height` (Somsen's "five data points"). Committing to the
    amount is essential — gmaxwell's point: an invalid chain would *steal* coins, not

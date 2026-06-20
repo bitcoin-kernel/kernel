@@ -18,10 +18,15 @@
 // full coin 5-tuple for the non-assumevalid (full-validation) variant — same
 // accumulator either way (see ../index.js encodeOutpoint / encodeCoin).
 //
-// sha256 is injected (kernel-coupling-free; WASM-backed keeps it fast). No salt by
-// default — the reference uses none, and matching it is what buys interop + the
-// de-risk. `salt` stays an opt-in escape hatch for the hardened variant discussed
-// on bitcoin-dev, but a non-null salt breaks reference compatibility.
+// sha256 is injected (kernel-coupling-free; WASM-backed keeps it fast).
+//
+// SALT is intentional, not optional hardening: per Somsen it is "a cheap way to
+// get a secure hash aggregate" — the saltless alternative is MuHash, "a much more
+// expensive operation". The salt is per-run (derive from the validation-height
+// blockhash, ideally + per-node randomness), so it is NOT an interop value: the
+// shareable artifact is the salt-free 1-bit hint, while each node recomputes its
+// own salted commitment locally. Production passes a salt; salt=null reproduces
+// the early reference prototype (currently unsalted) and is used by the tests.
 
 const M = 1n << 128n;
 const beU128 = (b, off) => { let n = 0n; for (let i = 0; i < 16; i++) n = (n << 8n) | BigInt(b[off + i]); return n; };
