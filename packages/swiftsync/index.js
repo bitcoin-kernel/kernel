@@ -4,6 +4,7 @@
 export { Accumulator } from './accumulator.js';
 export { applyBlocks } from './validate.js';
 export { eliasFanoEncode, eliasFanoDecode, encodeHintsfile, decodeHintsfile } from './hintsfile.js';
+export { compressAmount, decompressAmount, compressScript, expandScript, encodeHeightCode, decodeHeightCode, encodeCoin as encodeSpentCoin, decodeCoin as decodeSpentCoin } from './undo.js';
 
 const hexToBytes = (h) => { const n = h.length >> 1; const b = new Uint8Array(n); for (let i = 0; i < n; i++) b[i] = parseInt(h.substr(i * 2, 2), 16); return b; };
 // A txid as displayed is the reverse of its internal/consensus byte order, which
