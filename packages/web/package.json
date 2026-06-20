@@ -1,0 +1,14 @@
+{
+  "name": "@bitcoin-kernel/web",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "description": "A Bitcoin node in the browser: block cache, txid index, source registry, WebRTC peer mesh, in-window DAG verification.",
+  "exports": {
+    ".": "./index.js",
+    "./cache": "./cache.js",
+    "./mesh": "./mesh.js",
+    "./sources": "./sources.js",
+    "./dag": "./dag.js"
+  }
+}

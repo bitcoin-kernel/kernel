@@ -1,0 +1,13 @@
+{
+  "name": "@bitcoin-kernel/monorepo",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "description": "A pristine JavaScript Bitcoin kernel and the layers it powers.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "node --test packages/*/test/*.test.js"
+  }
+}
