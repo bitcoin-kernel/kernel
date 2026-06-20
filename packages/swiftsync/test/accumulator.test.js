@@ -1,7 +1,5 @@
-// The accumulator's invariants are what make SwiftSync correct: a coin created
-// and spent cancels, order never matters, and parallel partials merge to the
-// same digest as a single thread. These hold regardless of the final coin
-// encoding or hash construction, so they can be pinned now.
+// Invariants that make SwiftSync correct, plus a faithfulness check that mirrors
+// the reference crate's own test (github.com/2140-dev/swiftsync aggregate/tests).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,50 +7,69 @@ import { createHash } from 'node:crypto';
 import { Accumulator } from '../accumulator.js';
 
 const sha256 = (b) => new Uint8Array(createHash('sha256').update(b).digest());
-const coin = (s) => new TextEncoder().encode(s);
+const pre = (s) => new TextEncoder().encode(s);
 const hex = (b) => Buffer.from(b).toString('hex');
 const ZERO = '00'.repeat(32);
 
 test('empty accumulator digests to zero', () => {
-  assert.equal(hex(new Accumulator({ sha256 }).digest()), ZERO);
+  const a = new Accumulator({ sha256 });
+  assert.ok(a.isZero());
+  assert.equal(hex(a.digest()), ZERO);
 });
 
-test('add then remove cancels back to empty', () => {
+test('add then spend cancels back to zero', () => {
   const a = new Accumulator({ sha256 });
-  a.add(coin('utxo-1'));
-  assert.notEqual(hex(a.digest()), ZERO);
-  a.remove(coin('utxo-1'));
-  assert.equal(hex(a.digest()), ZERO, 'a created-then-spent coin leaves no trace');
+  a.add(pre('utxo-1'));
+  assert.equal(a.isZero(), false);
+  a.spend(pre('utxo-1'));
+  assert.ok(a.isZero(), 'a created-then-spent coin leaves no trace');
 });
 
 test('order-independent (commutative)', () => {
-  const a = new Accumulator({ sha256 }).add(coin('A')).add(coin('B')).add(coin('C'));
-  const b = new Accumulator({ sha256 }).add(coin('C')).add(coin('A')).add(coin('B'));
+  const a = new Accumulator({ sha256 }).add(pre('A')).add(pre('B')).add(pre('C'));
+  const b = new Accumulator({ sha256 }).add(pre('C')).add(pre('A')).add(pre('B'));
   assert.equal(hex(a.digest()), hex(b.digest()));
 });
 
 test('parallel partials merge to the single-thread digest', () => {
   const whole = new Accumulator({ sha256 });
-  for (const c of ['A', 'B', 'C', 'D']) whole.add(coin(c));
-  const w1 = new Accumulator({ sha256 }).add(coin('A')).add(coin('B'));
-  const w2 = new Accumulator({ sha256 }).add(coin('C')).add(coin('D'));
+  for (const c of ['A', 'B', 'C', 'D']) whole.add(pre(c));
+  const w1 = new Accumulator({ sha256 }).add(pre('A')).add(pre('B'));
+  const w2 = new Accumulator({ sha256 }).add(pre('C')).add(pre('D'));
   w1.merge(w2);
   assert.equal(hex(w1.digest()), hex(whole.digest()));
 });
 
-test('salt changes the digest (collision-resistance lever is actually mixed in)', () => {
-  const a = new Accumulator({ sha256, salt: new Uint8Array([1, 2, 3]) }).add(coin('x'));
-  const b = new Accumulator({ sha256, salt: new Uint8Array([9, 9, 9]) }).add(coin('x'));
-  assert.notEqual(hex(a.digest()), hex(b.digest()), 'same coin, different salt → different element');
-  // but the same salt is reproducible (deterministic per run)
-  const c = new Accumulator({ sha256, salt: new Uint8Array([1, 2, 3]) }).add(coin('x'));
-  assert.equal(hex(a.digest()), hex(c.digest()));
+test('addHash/spendHash (precomputed) match add/spend', () => {
+  const a = new Accumulator({ sha256 });
+  const h = a.hash(pre('x'));
+  const b = new Accumulator({ sha256 }).addHash(h);
+  assert.equal(hex(new Accumulator({ sha256 }).add(pre('x')).digest()), hex(b.digest()));
 });
 
-test('SwiftSync end state equals the real unspent set', () => {
-  // create a,b,c ; spend b within range  →  digest must equal the set {a,c}
-  const fast = new Accumulator({ sha256 });
-  fast.add(coin('a')).add(coin('b')).add(coin('c')).remove(coin('b'));
-  const truth = new Accumulator({ sha256 }).add(coin('a')).add(coin('c'));
-  assert.equal(hex(fast.digest()), hex(truth.digest()));
+test('salt is opt-in: null = reference, non-null diverges deterministically', () => {
+  const ref = new Accumulator({ sha256 }).add(pre('x'));
+  const salted = new Accumulator({ sha256, salt: new Uint8Array([1, 2, 3]) }).add(pre('x'));
+  assert.notEqual(hex(ref.digest()), hex(salted.digest()));
+  const salted2 = new Accumulator({ sha256, salt: new Uint8Array([1, 2, 3]) }).add(pre('x'));
+  assert.equal(hex(salted.digest()), hex(salted2.digest()));
+});
+
+// Mirrors the reference's aggregate/tests/test.rs::test_static_utxo_set: with the
+// same xorshift64 RNG (seed 420), spend N random outpoints (non-zero), then add
+// them all back — must return to exactly zero. Proves cancellation under the
+// reference's exact element layout (internal txid || vout LE).
+test('reference test_static_utxo_set: spend N then add N returns to zero', () => {
+  const M64 = (1n << 64n) - 1n;
+  let s = 420n;
+  const nextU64 = () => { s ^= (s << 13n) & M64; s ^= s >> 7n; s ^= (s << 17n) & M64; s &= M64; return s; };
+  const next32 = () => { const b = new Uint8Array(32); const dv = new DataView(b.buffer); for (let i = 0; i < 4; i++) dv.setBigUint64(i * 8, nextU64(), true); return b; };
+  const outpoint = () => { const txid = next32(); const vout = Number(nextU64() % BigInt(0xffffffff)); const op = new Uint8Array(36); op.set(txid, 0); new DataView(op.buffer).setUint32(32, vout, true); return op; };
+
+  const acc = new Accumulator({ sha256 });
+  const ops = [];
+  for (let i = 0; i < 10000; i++) { const op = outpoint(); acc.spend(op); ops.push(op); }
+  assert.equal(acc.isZero(), false);
+  for (const op of ops) acc.add(op);
+  assert.ok(acc.isZero(), 'spend-all then add-all cancels to zero');
 });

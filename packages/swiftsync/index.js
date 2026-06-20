@@ -1,28 +1,35 @@
 // @bitcoin-kernel/swiftsync — stateless, parallel fast initial validation.
-//
-// See DESIGN.md for the approach and the decisions still open (construction,
-// coin encoding, hint format, commitment source).
+// Construction matches github.com/2140-dev/swiftsync (see DESIGN.md).
 
 export { Accumulator } from './accumulator.js';
 
 const hexToBytes = (h) => { const n = h.length >> 1; const b = new Uint8Array(n); for (let i = 0; i < n; i++) b[i] = parseInt(h.substr(i * 2, 2), 16); return b; };
+// A txid as displayed is the reverse of its internal/consensus byte order, which
+// is what the reference hashes (`Txid::to_byte_array()`). Reverse it.
+const txidInternal = (txidHex) => hexToBytes(txidHex).reverse();
 
-// Canonical bytes for a coin — the full 5-tuple (DESIGN.md decision 2).
-// SwiftSync and the trusted commitment must encode coins identically:
-//   txid(32) || vout(4 LE) || height(4 LE) || coinbase(1) || amount(8 LE) || scriptPubKey
-// Committing to amount + coinbase + height is what binds monetary supply and
-// coinbase maturity; the salt is applied separately by the Accumulator.
+// assumevalid element: the outpoint only (reference default).
+//   txid(32, internal) || vout(4 LE)
+export function encodeOutpoint({ txid, vout }) {
+  const out = new Uint8Array(36);
+  out.set(txidInternal(txid), 0);
+  new DataView(out.buffer).setUint32(32, vout, true);
+  return out;
+}
+
+// full (non-assumevalid) element: the 5-tuple, so the digest also binds the
+// monetary supply, coinbase flag and height.
+//   outpoint(36) || scriptPubKey || amount(8 LE) || coinbase(1) || height(4 LE)
 export function encodeCoin({ txid, vout, height = 0, coinbase = false, amount, scriptPubKey }) {
-  const tx = hexToBytes(txid);
+  const op = encodeOutpoint({ txid, vout });
   const spk = hexToBytes(scriptPubKey || '');
-  const out = new Uint8Array(tx.length + 17 + spk.length);
-  out.set(tx, 0);
+  const out = new Uint8Array(op.length + spk.length + 13);
+  out.set(op, 0);
+  out.set(spk, op.length);
   const dv = new DataView(out.buffer);
-  let o = tx.length;
-  dv.setUint32(o, vout, true); o += 4;
-  dv.setUint32(o, height, true); o += 4;
-  out[o] = coinbase ? 1 : 0; o += 1;
+  let o = op.length + spk.length;
   dv.setBigUint64(o, BigInt(amount), true); o += 8;
-  out.set(spk, o);
+  out[o] = coinbase ? 1 : 0; o += 1;
+  dv.setUint32(o, height, true);
   return out;
 }

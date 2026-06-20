@@ -30,6 +30,21 @@ the **full** version: it re-derives everything and trusts no checkpoint, matchin
 `validate-sync` and our pristine stance. Slower than 5.28×, still stateless and
 parallel.
 
+## Reference & ecosystem (as of 2026-06)
+
+- **Reference:** `github.com/2140-dev/swiftsync` (Rust; `aggregate` + `node` crates).
+  Working prototypes; **btcd** and **floresta** are also implementing SwiftSync.
+- **Bandwidth-bound:** Somsen reports **<20 min** for assumevalid IBD on 10 Gbit —
+  "it goes as fast as you can download". So for the **browser layer** (bandwidth-
+  limited / lower-end), the **assumevalid** variant is the realistic fast path;
+  full validation is the pristine *desktop* path. Same accumulator, different
+  element (`encodeOutpoint` vs `encodeCoin`). Artifact size (hint + undo data) is
+  the lever — 2140 is actively working on reducing it.
+- **Complementary with Utreexo, not competing:** the Utreexo team is switching to
+  SwiftSync for IBD. The pairing: **SwiftSync bootstraps the chain fast → Utreexo
+  holds the resulting UTXO state compactly.** That's our two-layer plan exactly —
+  build SwiftSync first (fast sync), then Utreexo (compact state) on top.
+
 ## The oracle (why this is low-risk for us)
 
 `bitcoin-kernel/node`'s `validate-sync` already builds the **real** UTXO set the
@@ -49,14 +64,15 @@ method we use against Bitcoin Core. No external reference needed.
 
 ## Decisions
 
-1. **Construction — additive+salt (default), MuHash swappable.** Default is the
-   salted additive hash: `Σ SHA256(tag‖coin‖salt) mod 2²⁵⁶` (remove = subtract).
-   Plain additive hashing is collision-weak (subset-sum / generalized-birthday),
-   so the **salt** is load-bearing: derive it from the validation-height blockhash
-   **plus per-node randomness**, so a forger gets only one blind try per node.
-   SwiftSync's *original* construction was **MuHash** (provably birthday-resistant);
-   keep the `Accumulator` interface swappable so MuHash is a drop-in when provable
-   security (no salt argument) is wanted, at some speed cost.
+1. **Construction — match the reference (`2140-dev/swiftsync`).** Element =
+   `taggedSHA256("SwiftSync", preimage)`; accumulator = **two independent 128-bit
+   lanes** (high/low 16-byte halves of the element, wrapping add/sub mod 2¹²⁸ — no
+   carry between lanes). We match this byte-for-byte so our digests interoperate
+   with the reference and the btcd/floresta implementations, and so we can validate
+   against *their* hints (our de-risker). **No salt** — the reference uses none, and
+   matching it is the priority; the salt (gmaxwell's bitcoin-dev suggestion) stays
+   an opt-in escape hatch but a non-null salt breaks reference compatibility.
+   (The *gist* floated MuHash; the reference chose the simpler additive lanes.)
 2. **Coin encoding — the 5-tuple (full version).** `outpoint ‖ scriptPubKey ‖
    amount ‖ coinbaseFlag ‖ height` (Somsen's "five data points"). Committing to the
    amount is essential — gmaxwell's point: an invalid chain would *steal* coins, not
