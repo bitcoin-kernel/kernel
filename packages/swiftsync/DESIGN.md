@@ -64,7 +64,7 @@ method we use against Bitcoin Core. No external reference needed.
 - `hintsfile.js` — Elias-Fano hintsfile encode/decode (the interop artifact). **Done** (matches the BIP `elias_fano.json` vectors byte-for-byte).
 - `undo.js` — spent-coin data for the full version: CompressAmount + reconstructable script + height code + Coin record. **Done** (amount/script match the BIP vectors byte-for-byte).
 - `hint.js` — `generateHints` (per-block unspent-index sets from a chain) + `reconstructUtxo` (the assumevalid verifier). **Done** (end-to-end on 5,000 real testnet4 blocks: reconstruction == real UTXO set; hintsfile 0.98 bits/output).
-- (todo) full-chain run — generate the real testnet4 hintsfile + commitment (needs the finished sync) and the accumulator oracle test over the whole chain.
+- ✅ **full-chain capstone (2026-06-20)** — streamed all of testnet4 (1..140,503) through the accumulator and asserted its residual == an independently-rebuilt real UTXO set, **exactly**. Digest `85562fb9cee8b822f19c37473988fc23db71d5d84d503e4f9f15167c0a5a4716` (assumevalid/outpoint-only, salt=null). 45.88M outputs, 31.75M inputs, final UTXO 14,128,315 (matches validate-sync's 14,128,340 @h140,500, Δ−25 = 3-block height gap). Runner: `node/src/_sscapstone.mjs`. This digest is the regression anchor. (todo, optional) the real testnet4 hintsfile + parallel-worker driver.
 
 ## Decisions
 
