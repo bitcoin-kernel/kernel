@@ -29,13 +29,19 @@ its own domain), importing these packages — not in this monorepo.
 
 ## Distribution: gh-pages as a bundler-free CDN
 
-The default branch is `gh-pages`, and packages are served as static ESM. A demo
-imports a library directly by URL, pinned to a release tag — no bundler, no npm
-copy step, no staleness:
+The default branch is `gh-pages`, and packages are served as static ESM — no
+bundler, no npm copy step. A demo imports a library directly by URL:
 
 ```js
-import { Mesh } from 'https://bitcoin-kernel.github.io/kernel/packages/web/mesh.js';
+// rolling latest (gh-pages tip)
+import { Mesh } from 'https://bitcoin-kernel.com/kernel/packages/web/mesh.js';
+
+// pinned to a tag/commit for a reproducible deploy (via jsDelivr)
+import { Mesh } from 'https://cdn.jsdelivr.net/gh/bitcoin-kernel/kernel@v0.1.0/packages/web/mesh.js';
 ```
+
+(The `bitcoin-kernel.github.io/kernel/` Pages URL redirects to the
+`bitcoin-kernel.com/kernel/` custom domain.)
 
 ## License
 
