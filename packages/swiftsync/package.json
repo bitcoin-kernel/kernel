@@ -6,6 +6,8 @@
   "description": "Stateless, parallel fast initial validation: a cancelling UTXO accumulator verified against a trusted commitment.",
   "exports": {
     ".": "./index.js",
-    "./accumulator": "./accumulator.js"
+    "./accumulator": "./accumulator.js",
+    "./validate": "./validate.js",
+    "./hintsfile": "./hintsfile.js"
   }
 }

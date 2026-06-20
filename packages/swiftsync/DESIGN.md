@@ -58,11 +58,12 @@ method we use against Bitcoin Core. No external reference needed.
 
 ## Components
 
-- `accumulator.js` — commutative salted add/remove/merge accumulator. **Done.**
-- `index.js` `encodeCoin` — canonical coin bytes (the 5-tuple, below).
-- (todo) `hint.js` — generate/parse the 1-bit-per-output hint from a validated chain.
-- (todo) `undo.js` — read/serve spent-output data (≈Core `rev*.dat`) for the full version.
-- (todo) `validate.js` — drive the engine over blocks → add/remove ops, parallel workers, end on a digest.
+- `accumulator.js` — commutative salted add/remove/merge accumulator. **Done** (reference-vector verified).
+- `index.js` `encodeOutpoint` / `encodeCoin` — canonical element bytes. **Done.**
+- `validate.js` — drive the engine over blocks → add/spend ops. **Done** (verified on 5,000 real testnet4 blocks).
+- `hintsfile.js` — Elias-Fano hintsfile encode/decode (the interop artifact). **Done** (matches the BIP `elias_fano.json` vectors byte-for-byte).
+- (todo) `undo.js` — read/serve spent-output data (compressed amount + reconstructable script; BIP has vectors) for the full version.
+- (todo) hint generation — produce the per-block unspent-index sets from a validated chain (needs the finished sync).
 - (todo) oracle test — run validate-sync + SwiftSync over testnet4; assert equal digests.
 
 ## Decisions
