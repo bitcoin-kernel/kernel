@@ -37,7 +37,7 @@ bundler, no npm copy step. A demo imports a library directly by URL:
 import { Mesh } from 'https://bitcoin-kernel.com/kernel/packages/web/mesh.js';
 
 // pinned to a tag/commit for a reproducible deploy (via jsDelivr)
-import { Mesh } from 'https://cdn.jsdelivr.net/gh/bitcoin-kernel/kernel@v0.1.0/packages/web/mesh.js';
+import { Mesh } from 'https://cdn.jsdelivr.net/gh/bitcoin-kernel/kernel@v0.0.1/packages/web/mesh.js';
 ```
 
 (The `bitcoin-kernel.github.io/kernel/` Pages URL redirects to the
