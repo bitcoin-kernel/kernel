@@ -1,0 +1,461 @@
+export default {
+  "@context": "../context.jsonld",
+  "@graph": [
+    {
+      "@id": "btc:chain",
+      "@type": "Module",
+      "label": "chain",
+      "version": "0.0.13",
+      "comment": "Chain-contextual structures: state that depends on which chain you are following and where its tip is. Nothing in this module is covered by proof-of-work; it parameterizes and indexes the consensus structures defined in core.",
+      "layer": "context"
+    },
+    {
+      "@id": "btc:NetworkParams",
+      "@type": "ContextStruct",
+      "module": "btc:chain",
+      "label": "NetworkParams",
+      "comment": "Consensus parameters of a Bitcoin network deployment. These are constants agreed by convention at network genesis, not serialized data.",
+      "fields": [
+        {
+          "property": "btc:networkName",
+          "label": "name",
+          "valueType": "string",
+          "comment": "Human name of the network."
+        },
+        {
+          "property": "btc:magic",
+          "label": "magic",
+          "valueType": "hex",
+          "comment": "Four magic bytes prefixing every P2P message on this network."
+        },
+        {
+          "property": "btc:genesisHash",
+          "label": "genesisHash",
+          "valueType": "hash",
+          "comment": "Hash of the network's genesis block header."
+        },
+        {
+          "property": "btc:powLimit",
+          "label": "powLimit",
+          "valueType": "hex",
+          "comment": "Maximum (easiest) allowed proof-of-work target, as a 256-bit value."
+        },
+        {
+          "property": "btc:targetTimespan",
+          "label": "targetTimespan",
+          "valueType": "u32",
+          "comment": "Difficulty retarget period in seconds: two weeks (1,209,600)."
+        },
+        {
+          "property": "btc:targetSpacing",
+          "label": "targetSpacing",
+          "valueType": "u32",
+          "comment": "Target interval between blocks in seconds: ten minutes (600)."
+        },
+        {
+          "property": "btc:difficultyAdjustmentInterval",
+          "label": "difficultyAdjustmentInterval",
+          "valueType": "u32",
+          "comment": "Blocks per difficulty epoch: targetTimespan / targetSpacing = 2016."
+        },
+        {
+          "property": "btc:maxFutureBlockTime",
+          "label": "maxFutureBlockTime",
+          "valueType": "u32",
+          "comment": "Maximum seconds a block timestamp may be ahead of network-adjusted time: 7200 (2 hours)."
+        },
+        {
+          "property": "btc:halvingInterval",
+          "label": "halvingInterval",
+          "valueType": "u32",
+          "comment": "Blocks between block-subsidy halvings: 210,000."
+        },
+        {
+          "property": "btc:port",
+          "label": "port",
+          "valueType": "u16",
+          "comment": "Default P2P TCP port."
+        },
+        {
+          "property": "btc:p2pkhVersion",
+          "label": "p2pkhVersion",
+          "valueType": "u8",
+          "comment": "Base58Check version byte for pay-to-public-key-hash addresses."
+        },
+        {
+          "property": "btc:p2shVersion",
+          "label": "p2shVersion",
+          "valueType": "u8",
+          "comment": "Base58Check version byte for pay-to-script-hash addresses."
+        },
+        {
+          "property": "btc:bech32Hrp",
+          "label": "bech32Hrp",
+          "valueType": "string",
+          "comment": "Human-readable part of bech32/bech32m segwit addresses (BIP 173/350)."
+        },
+        {
+          "property": "btc:maxMoney",
+          "label": "maxMoney",
+          "valueType": "i64",
+          "comment": "Maximum total supply in satoshis: 21,000,000 BTC."
+        },
+        {
+          "property": "btc:initialSubsidy",
+          "label": "initialSubsidy",
+          "valueType": "i64",
+          "comment": "Block subsidy at genesis in satoshis: 50 BTC, halving every halvingInterval blocks."
+        },
+        {
+          "property": "btc:maxBlockWeight",
+          "label": "maxBlockWeight",
+          "valueType": "u32",
+          "comment": "Consensus block weight limit (BIP 141): 4,000,000 weight units."
+        },
+        {
+          "property": "btc:bip34Height",
+          "label": "bip34Height",
+          "valueType": "u32",
+          "comment": "Buried deployment: height from which coinbase scripts must encode the block height (BIP 34)."
+        },
+        {
+          "property": "btc:bip65Height",
+          "label": "bip65Height",
+          "valueType": "u32",
+          "comment": "Buried deployment: OP_CHECKLOCKTIMEVERIFY activation height (BIP 65)."
+        },
+        {
+          "property": "btc:bip66Height",
+          "label": "bip66Height",
+          "valueType": "u32",
+          "comment": "Buried deployment: strict DER signatures activation height (BIP 66)."
+        },
+        {
+          "property": "btc:csvHeight",
+          "label": "csvHeight",
+          "valueType": "u32",
+          "comment": "Buried deployment: OP_CHECKSEQUENCEVERIFY / relative lock-time activation height (BIP 68/112/113)."
+        },
+        {
+          "property": "btc:segwitHeight",
+          "label": "segwitHeight",
+          "valueType": "u32",
+          "comment": "Buried deployment: segregated witness activation height (BIP 141/143/147)."
+        },
+        {
+          "property": "btc:maxBlockSigopsCost",
+          "label": "maxBlockSigopsCost",
+          "valueType": "u32",
+          "comment": "Consensus limit on signature-operation cost per block: 80,000 (legacy sigops count 4x)."
+        },
+        {
+          "property": "btc:coinbaseMaturity",
+          "label": "coinbaseMaturity",
+          "valueType": "u32",
+          "comment": "Confirmations before a coinbase output may be spent: 100."
+        },
+        {
+          "property": "btc:powNoRetargeting",
+          "label": "powNoRetargeting",
+          "valueType": "bool",
+          "comment": "Whether difficulty retargeting is disabled (regtest only)."
+        },
+        {
+          "property": "btc:allowMinDifficultyBlocks",
+          "label": "allowMinDifficultyBlocks",
+          "valueType": "bool",
+          "comment": "Testnet rule: a block whose timestamp exceeds the previous block's by more than 2x targetSpacing may be mined at powLimit difficulty; otherwise difficulty is that of the last non-minimum-difficulty block of the epoch."
+        },
+        {
+          "property": "btc:timewarpFix",
+          "label": "timewarpFix",
+          "valueType": "bool",
+          "comment": "BIP 94 (testnet4): retargets compute from the epoch-first block's bits, and the first block of each epoch may not be timestamped more than maxTimewarp before its predecessor."
+        },
+        {
+          "property": "btc:maxTimewarp",
+          "label": "maxTimewarp",
+          "valueType": "u32",
+          "comment": "BIP 94: maximum seconds an epoch-first block may lag its predecessor: 600."
+        },
+        {
+          "property": "btc:xpubVersion",
+          "label": "xpubVersion",
+          "valueType": "u32",
+          "comment": "Serialization version of extended public keys (BIP 32): 0x0488b21e (xpub) on mainnet, 0x043587cf (tpub) on test networks."
+        }
+      ]
+    },
+    {
+      "@id": "btc:mainnet",
+      "@type": "btc:NetworkParams",
+      "label": "mainnet",
+      "comment": "The Bitcoin mainnet, live since 2009-01-03.",
+      "name": "mainnet",
+      "magic": "f9beb4d9",
+      "genesisHash": "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",
+      "powLimit": "00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "targetTimespan": 1209600,
+      "targetSpacing": 600,
+      "difficultyAdjustmentInterval": 2016,
+      "maxFutureBlockTime": 7200,
+      "halvingInterval": 210000,
+      "port": 8333,
+      "p2pkhVersion": 0,
+      "p2shVersion": 5,
+      "bech32Hrp": "bc",
+      "maxMoney": 2100000000000000,
+      "initialSubsidy": 5000000000,
+      "maxBlockWeight": 4000000,
+      "bip34Height": 227931,
+      "bip65Height": 388381,
+      "bip66Height": 363725,
+      "csvHeight": 419328,
+      "segwitHeight": 481824,
+      "maxBlockSigopsCost": 80000,
+      "coinbaseMaturity": 100,
+      "xpubVersion": 76067358
+    },
+    {
+      "@id": "btc:Coin",
+      "@type": "ContextStruct",
+      "module": "btc:chain",
+      "label": "Coin",
+      "comment": "An entry in the UTXO set: an unspent transaction output together with the chain context needed to validate its spending. The UTXO set is the complete state of bitcoin ownership; a pruned node keeps it (or a window of its evolution) while discarding old block data.",
+      "fields": [
+        {
+          "property": "btc:outpoint",
+          "label": "outpoint",
+          "valueType": "OutPoint",
+          "comment": "The txid:vout identifying this output."
+        },
+        {
+          "property": "btc:output",
+          "label": "output",
+          "valueType": "TransactionOutput",
+          "comment": "The output itself: value and scriptPubKey."
+        },
+        {
+          "property": "btc:height",
+          "label": "height",
+          "valueType": "u32",
+          "comment": "Height of the block that created this coin."
+        },
+        {
+          "property": "btc:coinbase",
+          "label": "coinbase",
+          "valueType": "bool",
+          "comment": "Whether the coin is a coinbase output; coinbase coins are spendable only after 100 confirmations (maturity)."
+        }
+      ]
+    },
+    {
+      "@id": "btc:testnet",
+      "@type": "btc:NetworkParams",
+      "label": "testnet",
+      "comment": "Testnet3: the long-running public test network. Coins are worthless by design. Allows minimum-difficulty blocks after a 20-minute gap.",
+      "name": "testnet",
+      "magic": "0b110907",
+      "genesisHash": "000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943",
+      "powLimit": "00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "targetTimespan": 1209600,
+      "targetSpacing": 600,
+      "difficultyAdjustmentInterval": 2016,
+      "maxFutureBlockTime": 7200,
+      "halvingInterval": 210000,
+      "port": 18333,
+      "p2pkhVersion": 111,
+      "p2shVersion": 196,
+      "bech32Hrp": "tb",
+      "maxMoney": 2100000000000000,
+      "initialSubsidy": 5000000000,
+      "maxBlockWeight": 4000000,
+      "bip34Height": 21111,
+      "bip65Height": 581885,
+      "bip66Height": 330776,
+      "csvHeight": 770112,
+      "segwitHeight": 834624,
+      "maxBlockSigopsCost": 80000,
+      "coinbaseMaturity": 100,
+      "allowMinDifficultyBlocks": true,
+      "xpubVersion": 70617039
+    },
+    {
+      "@id": "btc:testnet4",
+      "@type": "btc:NetworkParams",
+      "label": "testnet4",
+      "comment": "Testnet4 (BIP 94, live since 2024): a reset public test network with the timewarp fix and epoch-first retargeting; keeps the 20-minute minimum-difficulty exception.",
+      "name": "testnet4",
+      "magic": "1c163f28",
+      "genesisHash": "00000000da84f2bafbbc53dee25a72ae507ff4914b867c565be350b0da8bf043",
+      "powLimit": "00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "targetTimespan": 1209600,
+      "targetSpacing": 600,
+      "difficultyAdjustmentInterval": 2016,
+      "maxFutureBlockTime": 7200,
+      "halvingInterval": 210000,
+      "port": 48333,
+      "p2pkhVersion": 111,
+      "p2shVersion": 196,
+      "bech32Hrp": "tb",
+      "maxMoney": 2100000000000000,
+      "initialSubsidy": 5000000000,
+      "maxBlockWeight": 4000000,
+      "bip34Height": 1,
+      "bip65Height": 1,
+      "bip66Height": 1,
+      "csvHeight": 1,
+      "segwitHeight": 1,
+      "maxBlockSigopsCost": 80000,
+      "coinbaseMaturity": 100,
+      "allowMinDifficultyBlocks": true,
+      "timewarpFix": true,
+      "maxTimewarp": 600,
+      "xpubVersion": 70617039
+    },
+    {
+      "@id": "btc:signet",
+      "@type": "btc:NetworkParams",
+      "label": "signet",
+      "comment": "Signet (default global signet): blocks additionally require a signature from the network's signers; proof-of-work is easy.",
+      "name": "signet",
+      "magic": "0a03cf40",
+      "genesisHash": "00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6",
+      "powLimit": "00000377ae000000000000000000000000000000000000000000000000000000",
+      "targetTimespan": 1209600,
+      "targetSpacing": 600,
+      "difficultyAdjustmentInterval": 2016,
+      "maxFutureBlockTime": 7200,
+      "halvingInterval": 210000,
+      "port": 38333,
+      "p2pkhVersion": 111,
+      "p2shVersion": 196,
+      "bech32Hrp": "tb",
+      "maxMoney": 2100000000000000,
+      "initialSubsidy": 5000000000,
+      "maxBlockWeight": 4000000,
+      "bip34Height": 1,
+      "bip65Height": 1,
+      "bip66Height": 1,
+      "csvHeight": 1,
+      "segwitHeight": 1,
+      "maxBlockSigopsCost": 80000,
+      "coinbaseMaturity": 100,
+      "xpubVersion": 70617039
+    },
+    {
+      "@id": "btc:regtest",
+      "@type": "btc:NetworkParams",
+      "label": "regtest",
+      "comment": "Regression-test network: trivial proof-of-work (and no retargeting), local-only, for development. Subsidy halves every 150 blocks.",
+      "name": "regtest",
+      "magic": "fabfb5da",
+      "genesisHash": "0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206",
+      "powLimit": "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "targetTimespan": 1209600,
+      "targetSpacing": 600,
+      "difficultyAdjustmentInterval": 2016,
+      "maxFutureBlockTime": 7200,
+      "halvingInterval": 150,
+      "port": 18444,
+      "p2pkhVersion": 111,
+      "p2shVersion": 196,
+      "bech32Hrp": "bcrt",
+      "maxMoney": 2100000000000000,
+      "initialSubsidy": 5000000000,
+      "maxBlockWeight": 4000000,
+      "bip34Height": 1,
+      "bip65Height": 1,
+      "bip66Height": 1,
+      "csvHeight": 1,
+      "segwitHeight": 0,
+      "maxBlockSigopsCost": 80000,
+      "coinbaseMaturity": 100,
+      "powNoRetargeting": true,
+      "xpubVersion": 70617039
+    },
+    {
+      "@id": "btc:Checkpoint",
+      "@type": "ContextStruct",
+      "module": "btc:chain",
+      "label": "Checkpoint",
+      "comment": "An AssumeValid-style sync anchor: a known-good header at a retarget boundary from which a light client syncs forward. Trust-minimized by reproducibility \u2014 anyone with a node can verify the hash \u2014 and chosen at epoch boundaries so all subsequent retarget context is within the synced range.",
+      "fields": [
+        {
+          "property": "btc:checkpointNetwork",
+          "label": "network",
+          "valueType": "NetworkParams",
+          "comment": "Which network the checkpoint anchors."
+        },
+        {
+          "property": "btc:height",
+          "label": "height",
+          "valueType": "u32",
+          "comment": "Block height (a multiple of the retarget interval)."
+        },
+        {
+          "property": "btc:hash",
+          "label": "hash",
+          "valueType": "hash",
+          "comment": "The block hash."
+        },
+        {
+          "property": "btc:rawHeader",
+          "label": "rawHeader",
+          "valueType": "hex",
+          "comment": "The 80-byte header, so the chain can be extended without any fetch."
+        },
+        {
+          "property": "btc:contextHeaders",
+          "label": "contextHeaders",
+          "valueType": "hex",
+          "comment": "The ten headers immediately preceding the checkpoint, so median-time-past is fully decidable from the first synced header."
+        }
+      ]
+    },
+    {
+      "@id": "btc:mainnetCheckpoint",
+      "@type": "btc:Checkpoint",
+      "label": "mainnetCheckpoint",
+      "comment": "Mainnet sync anchor (retarget boundary, 2026-05).",
+      "network": "btc:mainnet",
+      "height": 951552,
+      "rawHeader": "046021200d794080a57a498c0d80e681de3e443488359077dd9501000000000000000000d52087be6c9a811306bd2da144e60e868ec93fb7803748fa7f62a701458987989a6a196a8f0602176f9614b2",
+      "hash": "00000000000000000001b472f1922f86148c8286609fb14be39e12b8bd14bb64",
+      "contextHeaders": [
+        "00e00320329170c306507e7241468b278022f409b1ba286c558f000000000000000000002b6aec9c94d018c8d4fda8b4ac3f8e94a33cfaa0af3ed1baf7e27978cd2fc90f7155196a790f02177f886517",
+        "0000003a1bda7e2a9b1b280b965d9c97282dd68f4c9c1730633e01000000000000000000969c0239f766df46e9d6fa46d47966ce25be7b8ff9a5b891c2a430cc84abb094cf58196a790f0217cdd4173b",
+        "00a00120f0002c1bd21454e92465a2e7cb685ce31fdbedb402030100000000000000000053a16d2a4a3cf97a66b924cbfa111d3191334cadd109670cc3b86f9660eb40c3525a196a790f021758e40d8e",
+        "00200520e234e1802bf8a13c1f36b42bfbf0f9402dc578d27d4300000000000000000000a7840a32bf37022e05f85e5fcc6a1aa3cdba6e6fbe00a9b2358a684a13160a552c5d196a790f021712e104ab",
+        "0000ff3f694ec45318e78a395db6c92479f87a02d5471538ff4a0100000000000000000088b2c3f67ece6204c627a90c7c3407e8116d1e0aa0901a9bf7d25b469d378bf93b61196a790f0217184b87f4",
+        "0000003cfafb792e6bfda2b9c1c2038e70bbfb5db00107fc9c33000000000000000000005b77567da023d144627900af2530970994973356e70e563782d2e3f1810ec2ac3c60196a790f0217231ab498",
+        "00403b224db1673e13cbfceadf0e779c8836a0b6ca2a1c5ee0e6000000000000000000006d02ba1190a57e3ac7550b53266b32ad53917b8339168ab16497c388e2989be2e961196a790f02173b04fafa",
+        "00e00020443827f43d0cb8db69ded9b5df758d128a8e1f908b1401000000000000000000cf67b5629994bc3bff35b2231de572ba1345c845dbecc3440a9603be354e25508f62196a790f0217c8f008de",
+        "0020cf2cc087b7a6c63b4efe3704246570571f1602ec6a54f4df010000000000000000006ca5a966665036584d71601f49779195dc0e0d39f8e6f80fd51dad19cc507f8ade66196a790f021791ae1370",
+        "0060012023af18bbc7d27a88edd1608079125d238ff939a98aef01000000000000000000327873f5c6eb22fc90fa130ff01dee2314b9df925ae3e78c6c754fc176a6165d7c68196a790f021798d22209"
+      ]
+    },
+    {
+      "@id": "btc:testnet4Checkpoint",
+      "@type": "btc:Checkpoint",
+      "label": "testnet4Checkpoint",
+      "comment": "Testnet4 sync anchor (retarget boundary, 2026-06).",
+      "network": "btc:testnet4",
+      "height": 137088,
+      "rawHeader": "0000f7201b5ff9ab68e80c066b16fd7164237beeeba524c9811cd13ab94325000000000076fc49b54f167d7ea3162ea421578eafd75bfdef99b818708c908c862c2daba8f6a41b6ab67603197c40888d",
+      "hash": "00000000000000021645cc90db9b1ad27156e130620a074028676fbeca049502",
+      "contextHeaders": [
+        "0020822b10c39a2aa9451222aa706721b1b66010d2566633c2178065bc51480000000000e7209e1e5df9875817dcca78e3f32621bc69b321e497ae8e8613b93feb9228ba157d1b6affff001dd80102bd",
+        "0060c62984ab117890abfdd498be9da2ae22503df220c75380f7e0d5851cf80000000000a4f2079d37205c4da3f4ebcff731185ed7580b038ae29ed22e9788b8072ca8f9c6811b6affff001d2c01a86f",
+        "0040c92dadc6694a30d208af88f438cb3d31534eaedc5b2d44c3e77e5f538f00000000008a180adf92a1997b6e8b50d54df8dff83b4d5ceae5ff64e183cd8c3ddde3a76677861b6affff001d8201c8ae",
+        "0040b82d1f702bca6dc1dd4406666dc54f57447d51e2b3ac9c93d315f2413000000000001c07b41608184dfef0ad72728e46f4902efba888dfbae9a2d0e7d3602e2b4f67288b1b6affff001d8a01550a",
+        "006031281f7e2a20e4f6d9aff5be223905c075a2516859db73d4321df8b78d00000000004442cb3ca5f694cb2ab1f90b4fc48626f4e9c93594c9166a0405a69947fc28dcd98f1b6affff001d50020eb3",
+        "0000602aab7be2beb013f0669e3fe8080e5b5f631caa1b6283ab2aa9d5680000000000004e574f4ec64c3f349c494575094c50b1900e1abe54342b2e3fa05b025a6055cf8a941b6affff001d8400f018",
+        "00a0632ec5854ca79337334f603aa86aa30b392989751014d7938277dcc0ce000000000041ebeff4da8e88193780a41f9bd1be92e1aea0b5c72e90f83f3cd5ac1e27a1d73b991b6affff001d4200d8fb",
+        "0040d7270f600bd55375dfbdb9427b408ef1e206b6b70dddf83c52ecfe97e20000000000db9067c08dbd41de36ad31e58d06935f301a49e7a3237eb365b67edc41f6b4a5ec9d1b6affff001d740263d3",
+        "0040532e071c2b4fd781b267fd6905f686362ef6be7f517b64429909e4b36d00000000009125e0b0ed6b67866520fe4eab8f6cedc4487383e4b6c97d526ee0fe4a7475d69da21b6affff001dd0025912",
+        "00c03131c3f75fe30714f2c9479bee4d4a7e654713899b96c5ae3cc2c9c5c5000000000082758b8d019959809c50dcbe4c297f396093282d320297d2e3a4533f869592864ea71b6affff001d9e00d72d"
+      ]
+    }
+  ]
+};

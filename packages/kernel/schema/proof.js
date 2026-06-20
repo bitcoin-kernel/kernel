@@ -1,0 +1,102 @@
+export default {
+  "@context": "../context.jsonld",
+  "@graph": [
+    {
+      "@id": "btc:proof",
+      "@type": "Module",
+      "label": "proof",
+      "version": "0.0.12",
+      "comment": "Compact proofs that let a client verify facts about the chain without holding the chain: merkle inclusion proofs anchor a transaction to a header, and the header chain's proof-of-work does the rest. This is the basis of SPV (Simplified Payment Verification, described in section 8 of the Bitcoin whitepaper).",
+      "layer": "proof"
+    },
+    {
+      "@id": "btc:MerkleBlock",
+      "@type": "ConsensusStruct",
+      "module": "btc:proof",
+      "label": "MerkleBlock",
+      "comment": "A partial merkle tree proof (BIP 37): a block header plus the minimal set of hashes and traversal flags needed to prove that specific transactions are committed by the header's merkleRoot. Verifying one requires only the 80-byte header chain \u2014 no block data.",
+      "bip": [
+        37
+      ],
+      "fields": [
+        {
+          "property": "btc:header",
+          "label": "header",
+          "comment": "The block header whose merkleRoot the proof reconstructs. Its proof-of-work and chain membership are verified exactly as in headers-only sync.",
+          "wireType": "struct",
+          "structType": "btc:BlockHeader"
+        },
+        {
+          "property": "btc:txCount",
+          "label": "txCount",
+          "comment": "Total number of transactions in the block, defining the shape of the full merkle tree.",
+          "wireType": "u32le"
+        },
+        {
+          "property": "btc:hashes",
+          "label": "hashes",
+          "comment": "The pruned-branch and matched-transaction hashes, in depth-first traversal order, prefixed by a CompactSize count.",
+          "wireType": "vec",
+          "itemType": "hash256"
+        },
+        {
+          "property": "btc:flags",
+          "label": "flags",
+          "comment": "Depth-first traversal flag bits, least-significant bit of each byte first, prefixed by a CompactSize byte count. A set bit at an interior node means descend; a set bit at a leaf marks a matched transaction; a clear bit means the subtree is summarized by one hash.",
+          "wireType": "varbytes"
+        }
+      ],
+      "derived": [
+        {
+          "property": "btc:root",
+          "label": "root",
+          "comment": "The merkle root reconstructed by depth-first traversal of the partial tree. The proof is valid only if it equals header.merkleRoot.",
+          "derivation": "extractPartialMerkleTree(txCount, hashes, flags).root"
+        },
+        {
+          "property": "btc:matchedTransactions",
+          "label": "matchedTransactions",
+          "comment": "The txids the proof demonstrates inclusion for, with their positions in the block.",
+          "derivation": "extractPartialMerkleTree(txCount, hashes, flags).matches"
+        }
+      ]
+    },
+    {
+      "@id": "btc:FilterParams",
+      "@type": "ContextStruct",
+      "module": "btc:proof",
+      "label": "FilterParams",
+      "bip": 158,
+      "comment": "Parameters of a Golomb-Rice coded set filter. Items are hashed with SipHash-2-4 (keyed by the first 16 bytes of the block hash) into [0, N*M), sorted, and delta-encoded with Rice parameter P. A filter's serialization is a CompactSize item count followed by the bitstream.",
+      "fields": [
+        {
+          "property": "btc:filterType",
+          "label": "filterType",
+          "valueType": "u8",
+          "comment": "Filter type byte; 0x00 is the basic filter."
+        },
+        {
+          "property": "btc:riceParameter",
+          "label": "p",
+          "valueType": "u8",
+          "comment": "Golomb-Rice remainder bit width."
+        },
+        {
+          "property": "btc:falsePositiveModulus",
+          "label": "m",
+          "valueType": "u32",
+          "comment": "Target range multiplier; the per-item false-positive rate is 1/M."
+        }
+      ]
+    },
+    {
+      "@id": "btc:basicFilter",
+      "@type": "btc:FilterParams",
+      "label": "basicFilter",
+      "comment": "The BIP 158 basic filter: every spent prevout scriptPubKey and every created scriptPubKey (empty scripts and OP_RETURN outputs excluded). Filter headers chain as dsha256(filterHash || prevFilterHeader), giving light clients a comparable commitment across peers (BIP 157).",
+      "filterType": 0,
+      "p": 19,
+      "m": 784931
+    }
+  ]
+};
