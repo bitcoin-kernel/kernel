@@ -3,7 +3,8 @@
 // step: re-run this, review the diff, commit. The engine's canonical dev home
 // stays bitcoin-desktop/schema; this is a vendored copy.
 //
-//   PIN: bitcoin-desktop/schema @ b213128 (Fix #70 OP_CODESEPARATOR, PR #71)
+//   PIN: bitcoin-desktop/schema @ PENDING (PoW target range checks + witness
+//        reserved-value guard, PR #72) — update to the merge SHA before landing.
 //
 // Sources (override via env for non-default checkouts):
 //   SCHEMA_DIR  — the schema repo (codec/ + schema/*.jsonld)
@@ -56,13 +57,14 @@ export * from './codec/hash.js';
 export * from './codec/secp256k1.js';
 export const schemas = { core, proof, script, chain, validate };
 
-export function createKernel() {
+export function createKernel(network = 'btc:mainnet') {
   const codec = new Codec(core, proof);
-  const scriptEngine = ScriptEngine.fromSchemas(script, chain);
+  codec.setChainParams(chain['@graph'].find((n) => n['@id'] === network));
+  const scriptEngine = ScriptEngine.fromSchemas(script, chain, network);
   const limits = script['@graph'].find((n) => n['@id'] === 'btc:scriptLimits');
   const interpreter = new ScriptInterpreter(codec, scriptEngine, limits);
-  const headers = HeaderEngine.fromSchemas(codec, chain, validate);
-  const blocks = BlockEngine.fromSchemas(codec, chain, validate, script);
+  const headers = HeaderEngine.fromSchemas(codec, chain, validate, network);
+  const blocks = BlockEngine.fromSchemas(codec, chain, validate, script, network);
   const spv = SpvEngine.fromSchemas(codec, validate);
   return { codec, script: scriptEngine, interpreter, headers, blocks, spv, schemas };
 }
