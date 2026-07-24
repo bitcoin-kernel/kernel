@@ -33,8 +33,17 @@ for (const k of SCHEMAS) {
 // wasm: copy, and make the loader fetch the wasm co-located with the MODULE
 // (import.meta.url) so it works served from any URL / the CDN.
 await copyFile(new URL('secp256k1.wasm', WASM), new URL('wasm/secp256k1.wasm', OUT));
-const loader = (await readFile(new URL('secp-wasm.js', WASM), 'utf8'))
-  .replace(/loadSecpWasm\(url = [^)]*\)/, "loadSecpWasm(url = new URL('./secp256k1.wasm', import.meta.url).href)");
+const WASM_DEFAULT_URL = "loadSecpWasm(url = new URL('./secp256k1.wasm', import.meta.url).href)";
+let loader = await readFile(new URL('secp-wasm.js', WASM), 'utf8');
+// Idempotent: the replacement text contains a ')', so [^)]* matches this
+// rewrite's own output and would corrupt it on a second pass. That happens
+// whenever WASM_DIR points at a previously generated copy.
+if (!loader.includes(WASM_DEFAULT_URL)) {
+  if (!/loadSecpWasm\(url = [^)]*\)/.test(loader)) {
+    throw new Error('secp-wasm.js: no loadSecpWasm(url = ...) default to rewrite');
+  }
+  loader = loader.replace(/loadSecpWasm\(url = [^)]*\)/, WASM_DEFAULT_URL);
+}
 await writeFile(new URL('wasm/secp-wasm.js', OUT), loader);
 
 // barrel + package.json
