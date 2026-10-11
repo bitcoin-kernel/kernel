@@ -11,8 +11,11 @@ import proof from './schema/proof.js';
 import script from './schema/script.js';
 import chain from './schema/chain.js';
 import validate from './schema/validate.js';
+import * as policy from './codec/policy/index.js';
 
 export { Codec, ScriptEngine, ScriptInterpreter, HeaderEngine, BlockEngine, SpvEngine };
+// Policy overlays (Plumb's relay filters) live beside consensus, never inside it.
+export { policy };
 export * from './codec/hash.js';
 export * from './codec/secp256k1.js';
 export const schemas = { core, proof, script, chain, validate };
