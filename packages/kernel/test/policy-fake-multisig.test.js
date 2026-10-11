@@ -53,7 +53,9 @@ test('the 3-of-5 wallet is seen as multisig, just not a fake one', () => {
 
 test('boundary: 11-of-15 (Liquid-shaped) passes, 1-of-12 fails, 10 unproven is the last allowed', () => {
   const key = '21' + '02' + 'ab'.repeat(32);
-  const ms = (m, n) => (0x50 + m).toString(16) + key.repeat(n) + (0x50 + n).toString(16) + 'ae';
+  // m and n as script writes them: OP_N up to 16, a one-byte push for 17..20.
+  const num = (v) => v <= 16 ? (0x50 + v).toString(16) : '01' + v.toString(16).padStart(2, '0');
+  const ms = (m, n) => num(m) + key.repeat(n) + num(n) + 'ae';
   const run = (m, n) => {
     const tx = { inputs: [{ scriptSig: '', prevout: { txid: '00'.repeat(32), vout: 0 }, sequence: 0 }], outputs: [], witness: [['', ms(m, n)]] };
     const prevouts = [{ value: 1000, scriptPubKey: '0020' + 'cd'.repeat(32) }];
@@ -63,6 +65,10 @@ test('boundary: 11-of-15 (Liquid-shaped) passes, 1-of-12 fails, 10 unproven is t
   assert.equal(run(1, 11), 0);   // 10 unproven: allowed
   assert.equal(run(1, 12), 1);   // 11 unproven: refused
   assert.equal(run(2, 16), 1);
+  // 17..20 keys cannot be written with OP_N; the one-byte push form must be seen too.
+  assert.equal(run(1, 20), 1);   // 19 unproven, the fattest this shape allows
+  assert.equal(run(10, 20), 0);  // 10 unproven: allowed
+  assert.equal(run(9, 20), 1);   // 11 unproven: refused
 });
 
 test('composition: the index runs the chosen overlays and reports weight share', () => {
