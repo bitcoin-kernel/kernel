@@ -3,7 +3,8 @@
 // step: re-run this, review the diff, commit. The engine's canonical dev home
 // stays bitcoin-desktop/schema; this is a vendored copy.
 //
-//   PIN: bitcoin-desktop/schema @ b213128 (Fix #70 OP_CODESEPARATOR, PR #71)
+//   PIN: bitcoin-desktop/schema @ PENDING (PoW target range checks + witness
+//        reserved-value guard, PR #72) — update to the merge SHA before landing.
 //
 // Sources (override via env for non-default checkouts):
 //   SCHEMA_DIR  — the schema repo (codec/ + schema/*.jsonld)
@@ -32,8 +33,17 @@ for (const k of SCHEMAS) {
 // wasm: copy, and make the loader fetch the wasm co-located with the MODULE
 // (import.meta.url) so it works served from any URL / the CDN.
 await copyFile(new URL('secp256k1.wasm', WASM), new URL('wasm/secp256k1.wasm', OUT));
-const loader = (await readFile(new URL('secp-wasm.js', WASM), 'utf8'))
-  .replace(/loadSecpWasm\(url = [^)]*\)/, "loadSecpWasm(url = new URL('./secp256k1.wasm', import.meta.url).href)");
+const WASM_DEFAULT_URL = "loadSecpWasm(url = new URL('./secp256k1.wasm', import.meta.url).href)";
+let loader = await readFile(new URL('secp-wasm.js', WASM), 'utf8');
+// Idempotent: the replacement text contains a ')', so [^)]* matches this
+// rewrite's own output and would corrupt it on a second pass. That happens
+// whenever WASM_DIR points at a previously generated copy.
+if (!loader.includes(WASM_DEFAULT_URL)) {
+  if (!/loadSecpWasm\(url = [^)]*\)/.test(loader)) {
+    throw new Error('secp-wasm.js: no loadSecpWasm(url = ...) default to rewrite');
+  }
+  loader = loader.replace(/loadSecpWasm\(url = [^)]*\)/, WASM_DEFAULT_URL);
+}
 await writeFile(new URL('wasm/secp-wasm.js', OUT), loader);
 
 // barrel + package.json
@@ -56,13 +66,14 @@ export * from './codec/hash.js';
 export * from './codec/secp256k1.js';
 export const schemas = { core, proof, script, chain, validate };
 
-export function createKernel() {
+export function createKernel(network = 'btc:mainnet') {
   const codec = new Codec(core, proof);
-  const scriptEngine = ScriptEngine.fromSchemas(script, chain);
+  codec.setChainParams(chain['@graph'].find((n) => n['@id'] === network));
+  const scriptEngine = ScriptEngine.fromSchemas(script, chain, network);
   const limits = script['@graph'].find((n) => n['@id'] === 'btc:scriptLimits');
   const interpreter = new ScriptInterpreter(codec, scriptEngine, limits);
-  const headers = HeaderEngine.fromSchemas(codec, chain, validate);
-  const blocks = BlockEngine.fromSchemas(codec, chain, validate, script);
+  const headers = HeaderEngine.fromSchemas(codec, chain, validate, network);
+  const blocks = BlockEngine.fromSchemas(codec, chain, validate, script, network);
   const spv = SpvEngine.fromSchemas(codec, validate);
   return { codec, script: scriptEngine, interpreter, headers, blocks, spv, schemas };
 }
